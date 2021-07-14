@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 import MainGrid from '../src/components/MainGrid'
 import Box from '../src/components/Box'
@@ -23,6 +23,35 @@ function ProfileSidebar(propriedades) {
   )
 }
 
+function ProfileRelationsBox(propriedades) {
+  // console.log(propriedades)
+  const seguidores = propriedades.items;
+  const listarSeisSeguidores = seguidores.slice(0,6);
+  // console.log('6 Elementos: ', mostrar6Seguidores);
+
+  return (
+    <ProfileRelationsBoxWrapper>
+      <h2 className="smallTitle">
+        {propriedades.title} ({propriedades.items.length})
+      </h2>
+
+      <ul>
+        {/* {propriedades.items.map((itemAtual) => { */}
+        {listarSeisSeguidores.map((itemAtual) => {
+          return (
+            <li key={itemAtual.id}>
+              <a href={`https://github.com/${itemAtual.title}.png`}>
+                <img src={itemAtual.avatar_url} />
+                <span>{itemAtual.title}</span>
+              </a>
+            </li>
+          )
+        })}
+      </ul> 
+    </ProfileRelationsBoxWrapper>
+  )
+}
+
 export default function Home() {
   const usuarioAleatorio = 'gustavo-gnunes';
   const [comunidades, setComunidades] = useState([{
@@ -38,6 +67,26 @@ export default function Home() {
     'marcobrunodev',
     'felipefialho'
   ]
+
+  const [seguidores, setSeguidores] = useState([]);
+  // pegar o array de dados do github
+  useEffect(() => {
+    // fetch-> faz a chamada para pegar os dados da api
+    // throw new Error-> erro 404, que é erro que não encontrou a página, ou o link está errado ou a página não existe ou está sem internet, etc..
+    // then-> faz o fetch, então retorna algo (esses dados vem de pedacinho em pedacinho)
+    // resposta.json-> converte todos os pedacinhos dados usados em js
+    // then-> espera converter todos esses pedacinhos e retorna algo
+    // catch-> caso der errado algo, mostra o erro
+    fetch('https://api.github.com/users/peas/followers')
+    .then((respostaDoServidor) => {
+      return respostaDoServidor.json();
+    })
+    .then((respostaCompleta) => {
+      setSeguidores(respostaCompleta);
+    })
+
+    
+  }, [])
 
   function handleCriaComunidade(e) {
     e.preventDefault();
@@ -105,7 +154,9 @@ export default function Home() {
         </div>
 
         <div className="profileRelationArea" style={{ gridArea: 'profileRelationArea' }}>
-        <ProfileRelationsBoxWrapper>
+          <ProfileRelationsBox title="Seguidores" items={seguidores} />
+
+          <ProfileRelationsBoxWrapper>
             <h2 className="smallTitle">
               Comunidades ({comunidades.length})
             </h2>
