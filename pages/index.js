@@ -26,6 +26,7 @@ function ProfileSidebar(propriedades) {
 function ProfileRelationsBox(propriedades) {
   // console.log(propriedades)
   const seguidores = propriedades.items;
+  // console.log('ssjhjk',seguidores)
   const listarSeisSeguidores = seguidores.slice(0,6);
   // console.log('6 Elementos: ', mostrar6Seguidores);
 
@@ -54,11 +55,7 @@ function ProfileRelationsBox(propriedades) {
 
 export default function Home() {
   const usuarioAleatorio = 'gustavo-gnunes';
-  const [comunidades, setComunidades] = useState([{
-    id: '2131321',
-    title: 'Eu odeio acordar cedo',
-    image: 'https://alurakut.vercel.app/capa-comunidade-01.jpg'
-  }])
+  const [comunidades, setComunidades] = useState([])
   const pessoasFavoritas = [
     'juunegreiros',
     'omariosouto',
@@ -71,12 +68,15 @@ export default function Home() {
   const [seguidores, setSeguidores] = useState([]);
   // pegar o array de dados do github
   useEffect(() => {
+    // GET
     // fetch-> faz a chamada para pegar os dados da api
     // throw new Error-> erro 404, que é erro que não encontrou a página, ou o link está errado ou a página não existe ou está sem internet, etc..
     // then-> faz o fetch, então retorna algo (esses dados vem de pedacinho em pedacinho)
     // resposta.json-> converte todos os pedacinhos dados usados em js
     // then-> espera converter todos esses pedacinhos e retorna algo
     // catch-> caso der errado algo, mostra o erro
+
+    // API do github
     fetch('https://api.github.com/users/peas/followers')
     .then((respostaDoServidor) => {
       return respostaDoServidor.json();
@@ -85,6 +85,35 @@ export default function Home() {
       setSeguidores(respostaCompleta);
     })
 
+    // API GraphQl - DatoCMS
+    fetch('https://graphql.datocms.com/', {
+      method: 'POST', // por padrão é GET
+      headers: {
+        'Authorization': 'ce68f848e6bc447e85293a6cfbe916', // esse token foi pego lá DatoCMS-> Configuração-> Tokens da API-> Read-only API token
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      // essa query pega no DatoCMS-> API Explorer-> onde faz as buscas para vim os dados cadastrados
+      body: JSON.stringify({
+        "query": `query {
+          allCommunities {
+            id
+            title
+            imageUrl
+            creatorSlug
+          }
+        }`
+      })
+    }) 
+    .then((response) => response.json()) // pega o retorno do reesponse.json() e já retorna
+    .then((respostaCompleta) => {
+      // data: esse data é padrão o graphql devolver
+      // data: é pq no navegador-> inspecionar-> Network-> graphql.datocms.com-> Response, vem esse data
+      // allCommunities: está dentro do data, que é o nome que está na consulta, ali em cima
+      const comunidadesVindasoDato = respostaCompleta.data.allCommunities // pega todas comunidades cadastradas no Dato
+      console.log(comunidadesVindasoDato)
+      setComunidades(comunidadesVindasoDato) 
+    })
     
   }, [])
 
@@ -99,14 +128,28 @@ export default function Home() {
     
     //pega o que o usuário digitou no input
     const comunidade = {
-      id: new Date().toISOString(),
       title: dadosDoForm.get('title'),
-      image: dadosDoForm.get('image'),
+      imageUrl: dadosDoForm.get('image'),
+      creatorSlug: usuarioAleatorio,
     }
 
-    // comunidades.push('Alura Stars');
-    const comunidadesAtualizada = [...comunidades, comunidade];
-    setComunidades(comunidadesAtualizada);
+    // chamar o servidor que o next está rodando que foi criado na pasta pages-> api-> comunidades.js
+    // conectar o front-end em qq api do back-end
+    fetch('/api/comunidades', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(comunidade)
+    })
+    .then(async (response) => {
+      const dados = await response.json();
+      console.log(dados.registroCriado);
+      const comunidade = dados.registroCriado;
+
+      const comunidadesAtualizadas = [...comunidades, comunidade];
+      setComunidades(comunidadesAtualizadas);
+    })
   }
 
   return (
@@ -165,8 +208,8 @@ export default function Home() {
               {comunidades.map((itemAtual) => {
                 return (
                   <li key={itemAtual.id}>
-                    <a href={`/users/${itemAtual.title}`}>
-                      <img src={itemAtual.image} />
+                    <a href={`/communities/${itemAtual.id}`}>
+                      <img src={itemAtual.imageUrl} />
                       <span>{itemAtual.title}</span>
                     </a>
                   </li>
