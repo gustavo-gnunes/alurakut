@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import nookies from 'nookies';
+import jwt from 'jsonwebtoken'; // para decodificar um token
 
 import MainGrid from '../src/components/MainGrid'
 import Box from '../src/components/Box'
@@ -53,8 +55,8 @@ function ProfileRelationsBox(propriedades) {
   )
 }
 
-export default function Home() {
-  const usuarioAleatorio = 'gustavo-gnunes';
+export default function Home(props) {
+  const usuarioAleatorio = props.githubUser; // está pegando o nome que foi passado lá no arquivo lá embaixo no getServerSideProps
   const [comunidades, setComunidades] = useState([])
   const pessoasFavoritas = [
     'juunegreiros',
@@ -85,6 +87,7 @@ export default function Home() {
       setSeguidores(respostaCompleta);
     })
 
+    console.log('tOKENNNN', process.env.DATOCMS_TOKEN);
     // API GraphQl - DatoCMS
     fetch('https://graphql.datocms.com/', {
       method: 'POST', // por padrão é GET
@@ -240,4 +243,50 @@ export default function Home() {
       </MainGrid>
     </>
   )
+}
+
+// getServerSideProps-> para validar se o usuário está logado ou não
+// --> enquanto o html está sendo montado, dá para ver se o usuário está logado ou não, 
+//     -> redirecionando ele para outra página ou para página de login
+export async function getServerSideProps(context) {
+  // pegar informações do cookie que foi salvo no navegador (essa informação foi salva no arquivo pages-> login.js)
+  // context: deve passar o context, que está no parâmentro do getServerSideProps
+  const cookies = nookies.get(context);
+  // .USER_TOKEN: nome do cookie que vai pegar, que foi salvo no cookie do navegador
+  const token = cookies.USER_TOKEN;
+
+  console.log(token)
+
+  // API que foi criada pelo alura, para retornar se um token do usuário do github é válido
+  // retorna true ou false
+  const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
+    headers: {
+      Authorization: token // vê se o token está válido
+    }
+  })
+  .then((resposta) => resposta.json());
+
+  console.log('isAuthenticated', isAuthenticated);
+
+  // se o usuário não estiver autenticado, vai para página de login
+  // o next faz o redirecionamento para outra página com o redirect
+  // if(!isAuthenticated) {
+  if(isAuthenticated) {
+    return {
+      redirect: {
+        destination: '/login', // para onde o usuário vai
+        permanent: false,
+      }
+    }
+  }
+
+  // jwt.decode: decodificar o token, para saber se é um token valido. Ex: se existe esse usuário no github
+  // { githubUser }: coloca a variável dentro dos {}, para dizer que é a mesma variável usada lá no return do props
+  const { githubUser } = jwt.decode(token);
+  return {
+    // props: tudo que passar na props, dá para pegar no componente, como neste componente Home lá em cima
+    props: {
+      githubUser
+    }, // will be passed to the page component as props
+  }
 }
