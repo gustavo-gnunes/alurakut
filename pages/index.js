@@ -9,7 +9,7 @@ import { ProfileRelationsBoxWrapper } from '../src/components/ProfileRelations'
 
 function ProfileSidebar(propriedades) {
   return (
-    <Box >
+    <Box as="aside">
       <img src={`https://github.com/${propriedades.githubUser}.png`} style={{ borderRadius: '8px' }} />
       <hr />
 
@@ -87,7 +87,6 @@ export default function Home(props) {
       setSeguidores(respostaCompleta);
     })
 
-    console.log('tOKENNNN', process.env.DATOCMS_TOKEN);
     // API GraphQl - DatoCMS
     fetch('https://graphql.datocms.com/', {
       method: 'POST', // por padrão é GET
@@ -113,7 +112,7 @@ export default function Home(props) {
       // data: esse data é padrão o graphql devolver
       // data: é pq no navegador-> inspecionar-> Network-> graphql.datocms.com-> Response, vem esse data
       // allCommunities: está dentro do data, que é o nome que está na consulta, ali em cima
-      const comunidadesVindasoDato = respostaCompleta.data.allCommunities // pega todas comunidades cadastradas no Dato
+      const comunidadesVindasoDato = respostaCompleta.data.allCommunities; // pega todas comunidades cadastradas no Dato
       console.log(comunidadesVindasoDato)
       setComunidades(comunidadesVindasoDato) 
     })
@@ -208,7 +207,7 @@ export default function Home(props) {
             </h2>
 
             <ul>
-              {comunidades.map((itemAtual) => {
+              {comunidades.slice(0,6).map((itemAtual) => {
                 return (
                   <li key={itemAtual.id}>
                     <a href={`/communities/${itemAtual.id}`}>
@@ -227,7 +226,7 @@ export default function Home(props) {
             </h2>
 
             <ul>
-              {pessoasFavoritas.map((itemAtual) => {
+              {pessoasFavoritas.slice(0,6).map((itemAtual) => {
                 return (
                   <li key={itemAtual}>
                     <a href={`/users/${itemAtual}`}>
@@ -255,23 +254,25 @@ export async function getServerSideProps(context) {
   // .USER_TOKEN: nome do cookie que vai pegar, que foi salvo no cookie do navegador
   const token = cookies.USER_TOKEN;
 
-  console.log(token)
+  // jwt.decode: decodificar o token, para saber se é um token valido. Ex: se existe esse usuário no github
+  const decodedToken = jwt.decode(token);
+  const githubUser = decodedToken?.githubUser;
 
   // API que foi criada pelo alura, para retornar se um token do usuário do github é válido
   // retorna true ou false
-  const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
-    headers: {
-      Authorization: token // vê se o token está válido
-    }
-  })
-  .then((resposta) => resposta.json());
+  // const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
+  //   headers: {
+  //     Authorization: token // vê se o token está válido
+  //   }
+  // })
+  // .then((resposta) => resposta.json());
 
-  console.log('isAuthenticated', isAuthenticated);
+  // console.log('isAuthenticated', isAuthenticated);
 
   // se o usuário não estiver autenticado, vai para página de login
   // o next faz o redirecionamento para outra página com o redirect
   // if(!isAuthenticated) {
-  if(isAuthenticated) {
+  if(!githubUser) {
     return {
       redirect: {
         destination: '/login', // para onde o usuário vai
@@ -280,9 +281,9 @@ export async function getServerSideProps(context) {
     }
   }
 
-  // jwt.decode: decodificar o token, para saber se é um token valido. Ex: se existe esse usuário no github
+  
   // { githubUser }: coloca a variável dentro dos {}, para dizer que é a mesma variável usada lá no return do props
-  const { githubUser } = jwt.decode(token);
+  // const { githubUser } = jwt.decode(token);
   return {
     // props: tudo que passar na props, dá para pegar no componente, como neste componente Home lá em cima
     props: {
